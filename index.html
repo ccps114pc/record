@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生記錄表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        // Tailwind 顏色與主題擴充
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cloud': '#FFFFFF',
+                        'sky-light': '#E4F4FB',
+                        'title-blue': '#4A5568',
+                        'pill-blue': '#798CAE',
+                    },
+                    fontFamily: {
+                        sans: ['"Iansui"', '"Noto Sans TC"', 'sans-serif'],
+                        'bubbly': ['"Fredoka"', '"Iansui"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Iansui&display=swap');
+
+        body {
+            background-color: #EBF4F6;
+            color: #4A5568;
+            font-family: "Iansui", "Noto Sans TC", sans-serif;
+            overflow-x: hidden;
+            transition: background-color 0.4s ease;
+        }
+
+        /* 標題白底裝飾 */
+        .title-banner {
+            background-color: #FFFFFF;
+            border-radius: 36px;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .student-btn {
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .student-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        /* 隱藏捲軸 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .category-chip {
+            transition: all 0.25s ease;
+        }
+        .category-chip.active-chip {
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* 裝飾性浮動圖示動畫 */
+        .floating-deco {
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.75;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 relative">
+
+    <!-- 背景裝飾物 -->
+    <div id="decoIcon1" class="fixed top-8 left-4 sm:left-10 text-5xl sm:text-6xl floating-deco animate-bounce" style="animation-duration: 3.5s;">🪥</div>
+    <div id="decoIcon2" class="fixed top-8 right-4 sm:right-10 text-5xl sm:text-6xl floating-deco animate-pulse" style="animation-duration: 4s;">✨</div>
+    <div class="fixed bottom-4 left-4 sm:left-10 text-6xl sm:text-7xl floating-deco">🐱</div>
+    <div class="fixed bottom-4 right-4 sm:right-10 text-6xl sm:text-7xl floating-deco">🐶</div>
+
+    <!-- 頂部 Header 區域 -->
+    <header class="relative z-10 pt-8 pb-4 px-4">
+        <div class="max-w-4xl mx-auto flex flex-col items-center">
+            
+            <!-- 標題橫幅 -->
+            <div class="title-banner w-full max-w-3xl py-6 px-4 text-center relative border-4 border-white">
+                <div id="badgeTag" class="absolute -top-4 left-1/2 transform -translate-x-1/2 text-white px-5 py-1.5 rounded-2xl font-bubbly text-sm tracking-wider shadow-md flex items-center gap-2 whitespace-nowrap transition-colors duration-300 bg-[#52BEE8]">
+                    <span class="w-2.5 h-2.5 bg-white/80 rounded-full animate-ping"></span>
+                    班級日常紀錄表
+                </div>
+                
+                <h1 class="text-2xl sm:text-4xl font-bubbly font-bold tracking-wider mt-2 flex items-center justify-center gap-2 flex-wrap text-gray-700">
+                    <span>學生</span>
+                    <!-- 項目動態切換 Tag -->
+                    <span id="currentCategoryTag" class="px-4 py-1 rounded-2xl text-white shadow-sm transition-all duration-300 bg-[#52BEE8] inline-flex items-center gap-1.5">
+                        <span id="tagIcon">🪥</span>
+                        <span id="tagName">潔牙</span>
+                    </span>
+                    <span>記錄表</span>
+                </h1>
+
+                <!-- 項目選擇分色區 -->
+                <div class="mt-5 flex flex-wrap justify-center items-center gap-2 sm:gap-3 border-t border-b border-gray-100 py-3">
+                    <span class="text-xs sm:text-sm font-bold text-gray-400 mr-1">選擇項目：</span>
+                    
+                    <button class="category-chip active-chip px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 transition-all bg-[#52BEE8] text-white border-[#52BEE8]" data-cat="潔牙" data-icon="🪥" data-color="#52BEE8" data-light="#E4F4FB">
+                        🪥 潔牙
+                    </button>
+
+                    <button class="category-chip px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 transition-all bg-white text-gray-600 border-gray-200 hover:border-[#FF9F43]" data-cat="作業" data-icon="📝" data-color="#FF9F43" data-light="#FFF4E6">
+                        📝 作業
+                    </button>
+
+                    <button class="category-chip px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 transition-all bg-white text-gray-600 border-gray-200 hover:border-[#A55EEA]" data-cat="訂正" data-icon="✏️" data-color="#A55EEA" data-light="#F3E8FF">
+                        ✏️ 訂正
+                    </button>
+
+                    <button class="category-chip px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 transition-all bg-white text-gray-600 border-gray-200 hover:border-[#2ED573]" data-cat="回條" data-icon="📩" data-color="#2ED573" data-light="#E6F9ED">
+                        📩 回條
+                    </button>
+
+                    <button id="customCatBtn" class="category-chip px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 transition-all bg-white text-gray-600 border-gray-200 hover:border-[#FF6B6B]" data-cat="custom" data-icon="📌" data-color="#FF6B6B" data-light="#FFEAEA">
+                        ➕ 自訂...
+                    </button>
+                </div>
+
+                <!-- 操作按鈕列 -->
+                <div class="mt-4 flex flex-wrap justify-center items-center gap-3">
+                    <button id="openQueryBtn" class="bg-white hover:bg-gray-50 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm border-2 border-gray-200 active:translate-y-0.5 transition-all flex items-center gap-1.5 text-sm sm:text-base">
+                        🔍 歷史查詢
+                    </button>
+
+                    <button id="endRecordBtn" class="text-white px-7 py-2 rounded-full font-bold shadow-md active:translate-y-0.5 transition-all flex items-center gap-2 text-sm sm:text-base bg-[#52BEE8] hover:opacity-90">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        儲存今日紀錄
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要區域：學生按鈕網格 (區分為 4 排) -->
+    <main class="max-w-4xl mx-auto px-4 py-2 relative z-10">
+        <div class="bg-white/95 backdrop-blur-md rounded-[32px] shadow-lg p-5 sm:p-7 border-4 border-white relative overflow-hidden">
+            
+            <!-- 狀態統計頂欄 -->
+            <div class="flex justify-between items-center mb-6 border-b-2 border-gray-100 pb-4">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bubbly font-bold text-gray-700 flex items-center gap-2">
+                        <span id="cardHeaderIcon" class="text-2xl">🪥</span>
+                        <span id="cardHeaderTitle">今日打卡區 (潔牙)</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-gray-400 font-bold mt-0.5" id="currentDateDisplay"></p>
+                </div>
+                <div class="text-right bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+                    <span class="text-xs sm:text-sm text-gray-500 font-bold">完成進度：</span>
+                    <span id="completedCount" class="text-2xl sm:text-3xl font-bubbly font-bold transition-colors duration-300 text-[#52BEE8]">0</span>
+                    <span class="text-xs sm:text-sm text-gray-400 font-bold">/ 32</span>
+                </div>
+            </div>
+
+            <!-- 四排學生座號容器 (01~16 / 21~36) -->
+            <div id="fourRowsContainer" class="space-y-6">
+                <!-- 由 JS 動態生成 4 個排組 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 右下角浮動：全選與重置按鈕組 -->
+    <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+        <button id="selectAllBtn" title="全選/全取消" class="bg-white border-3 border-gray-300 text-gray-600 hover:bg-gray-100 w-14 h-14 rounded-full shadow-lg flex flex-col items-center justify-center transition-all duration-200">
+            <span class="text-xs font-bold font-bubbly">全選</span>
+        </button>
+
+        <button id="resetBtn" title="清除今日選取" class="bg-white border-3 border-amber-400 text-amber-500 hover:bg-amber-400 hover:text-white w-14 h-14 rounded-full shadow-lg flex flex-col items-center justify-center transition-all duration-300 group">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:-rotate-180 transition-transform duration-500"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            <span class="text-[10px] font-bold font-bubbly">重置</span>
+        </button>
+    </div>
+
+    <!-- 自訂項目輸入 Modal -->
+    <div id="customInputModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-sm w-full transform scale-95 transition-transform duration-300 border-4 border-white text-center">
+            <h3 class="text-xl font-bubbly font-bold text-gray-700 mb-2 flex items-center justify-center gap-2">
+                <span>📌</span> 新增自訂紀錄項目
+            </h3>
+            <p class="text-xs text-gray-500 mb-4 font-bold">請輸入您想要記錄的項目名稱（例如：費用、Vaccine、回聯絡簿）</p>
+            
+            <input type="text" id="customCategoryInput" placeholder="請輸入項目名稱..." maxlength="10" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-center font-bold text-gray-700 focus:outline-none focus:border-[#FF6B6B] mb-5 text-lg bg-gray-50">
+            
+            <div class="flex gap-3 justify-center">
+                <button id="cancelCustomBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-5 py-2.5 rounded-full font-bold text-sm transition-all">取消</button>
+                <button id="confirmCustomBtn" class="bg-[#FF6B6B] hover:bg-[#EE5253] text-white px-7 py-2.5 rounded-full font-bold text-sm shadow-md transition-all">確定啟用</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷史查詢頁框 (Query Modal) -->
+    <div id="queryModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[90] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4 py-6">
+        <div class="bg-white/95 backdrop-blur-md rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 border-4 border-white relative overflow-hidden" id="queryModalContent">
+            
+            <button id="closeQueryBtn" class="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-700 text-2xl font-bold bg-gray-100 hover:bg-gray-200 w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                &times;
+            </button>
+
+            <div class="p-6 sm:p-8 overflow-y-auto no-scrollbar flex-1 mt-2">
+                <h2 class="text-2xl font-bubbly font-bold text-gray-700 mb-6 flex items-center gap-2">
+                    <span>🔍</span> 歷史紀錄查詢
+                </h2>
+
+                <!-- 頁籤切換 -->
+                <div class="flex border-b-2 border-gray-100 mb-6">
+                    <button id="tabStudent" class="px-4 py-2 border-b-4 border-[#52BEE8] text-[#52BEE8] font-bold font-bubbly text-lg rounded-t-lg transition-colors">依座號查詢</button>
+                    <button id="tabPeriod" class="px-4 py-2 border-b-4 border-transparent text-gray-400 hover:text-gray-600 font-bold font-bubbly text-lg rounded-t-lg transition-colors">依日期查詢</button>
+                </div>
+
+                <!-- 座號查詢面板 -->
+                <div id="panelStudent" class="block">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <input type="text" id="queryStudentId" placeholder="座號 (如 01 或 25)" class="border-2 border-gray-200 rounded-xl px-4 py-2 w-44 focus:outline-none focus:border-[#52BEE8] text-center font-bold text-gray-700 bg-white">
+                        <button id="btnQueryStudent" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-6 py-2 rounded-xl transition-colors">查詢座號紀錄</button>
+                    </div>
+                    <div id="resultStudent" class="text-sm text-gray-600 bg-gray-50 p-4 rounded-2xl min-h-[120px] border border-gray-100 font-bold flex items-center">
+                        請輸入座號（01~16, 21~36）查詢該生的各項記錄。
+                    </div>
+                </div>
+
+                <!-- 週期查詢面板 -->
+                <div id="panelPeriod" class="hidden">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <input type="date" id="queryStartDate" class="border-2 border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#52BEE8] text-gray-700 font-bold bg-white">
+                        <span class="text-gray-400 font-bold">至</span>
+                        <input type="date" id="queryEndDate" class="border-2 border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#52BEE8] text-gray-700 font-bold bg-white">
+                        <button id="btnQueryPeriod" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-6 py-2 rounded-xl transition-colors">查詢日期區間</button>
+                    </div>
+                    <div id="resultPeriod" class="text-sm text-gray-600 bg-gray-50 p-4 rounded-2xl min-h-[120px] border border-gray-100 font-bold">
+                        請選擇日期區間查詢班級紀錄。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂提示 Modal -->
+    <div id="customModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[110] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-7 max-w-sm w-full transform scale-95 transition-transform duration-300 border-4 border-white text-center" id="modalContent">
+            <h3 id="modalTitle" class="text-xl font-bubbly font-bold text-gray-700 mb-3 flex items-center justify-center gap-2"></h3>
+            <p id="modalMessage" class="text-gray-600 text-sm whitespace-pre-line leading-relaxed mb-6 font-bold"></p>
+            <div class="flex justify-center">
+                <button id="modalCloseBtn" class="bg-gray-700 hover:bg-gray-800 text-white px-8 py-2.5 rounded-full font-bubbly font-bold text-sm shadow-md transition-all">知道了 (OK)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 邏輯控制腳本 -->
+    <script type="module">
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // 座號定義：四排範圍 (01~16, 21~36)
+        const ROW_DEFINITIONS = [
+            { title: "第一排 (01 - 08)", ids: ["01","02","03","04","05","06","07","08"] },
+            { title: "第二排 (09 - 16)", ids: ["09","10","11","12","13","14","15","16"] },
+            { title: "第三排 (21 - 28)", ids: ["21","22","23","24","25","26","27","28"] },
+            { title: "第四排 (29 - 36)", ids: ["29","30","31","32","33","34","35","36"] }
+        ];
+
+        const ALL_STUDENTS = ROW_DEFINITIONS.flatMap(r => r.ids);
+
+        // 項目主題設定
+        const CATEGORIES_CONFIG = {
+            '潔牙': { icon: '🪥', color: '#52BEE8', light: '#E4F4FB', textDark: '#2B8CB5' },
+            '作業': { icon: '📝', color: '#FF9F43', light: '#FFF4E6', textDark: '#D97014' },
+            '訂正': { icon: '✏️', color: '#A55EEA', light: '#F3E8FF', textDark: '#8833D7' },
+            '回條': { icon: '📩', color: '#2ED573', light: '#E6F9ED', textDark: '#1E9D52' },
+            'custom': { icon: '📌', color: '#FF6B6B', light: '#FFEAEA', textDark: '#D63031' }
+        };
+
+        // 當前選取的項目狀態
+        let currentCategory = '潔牙';
+        let currentCategoryIcon = '🪥';
+        let currentCategoryColor = '#52BEE8';
+        let currentCategoryLight = '#E4F4FB';
+
+        // 個別項目的學生打卡狀態 (記錄在記憶體中)
+        let recordState = {
+            '潔牙': new Set(),
+            '作業': new Set(),
+            '訂正': new Set(),
+            '回條': new Set()
+        };
+
+        window.db = null;
+        window.user = null;
+        window.appId = 'student-classroom-records';
+        window.allRecords = [];
+        window.isOfflineMode = false;
+
+        // Firebase Config (防護備用)
+        const firebaseConfig = {
+		    apiKey: "AIzaSyCTVaHM43A2WoOtycDBWQbe1I5PLT2-hIg",
+			authDomain: "record-87976.firebaseapp.com",
+			projectId: "record-87976",
+			storageBucket: "record-87976.firebasestorage.app",
+			messagingSenderId: "145250231533",
+			appId: "1:145250231533:web:1602223d25792c85c958e4"
+		};
+
+        async function initFirebase() {
+            try {
+                let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+                const auth = getAuth(app);
+                window.db = getFirestore(app);
+
+                await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        window.user = u;
+                        loadRecordsFromFirebase();
+                    }
+                });
+            } catch (error) {
+                console.warn("使用單機 LocalStorage 儲存模式:", error);
+                enableOfflineMode();
+            }
+        }
+
+        function enableOfflineMode() {
+            window.isOfflineMode = true;
+            loadRecordsFromFirebase();
+        }
+
+        function loadRecordsFromFirebase() {
+            if (window.isOfflineMode) {
+                const localData = JSON.parse(localStorage.getItem('classroom_student_records') || '[]');
+                window.allRecords = localData;
+                return;
+            }
+
+            if (!window.user || !window.db) return;
+            const recordsRef = collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'records');
+
+            onSnapshot(recordsRef, (snapshot) => {
+                window.allRecords = [];
+                snapshot.forEach((docSnap) => {
+                    window.allRecords.push(docSnap.data());
+                });
+                window.allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, (error) => {
+                console.error("Firestore sync error:", error);
+                enableOfflineMode();
+            });
+        }
+
+        window.saveRecord = async function(today, category, completedArray) {
+            const docId = `${today}_${category}`;
+            const recordData = {
+                id: docId,
+                date: today,
+                category: category,
+                categoryIcon: currentCategoryIcon,
+                completed: completedArray,
+                total: ALL_STUDENTS.length,
+                timestamp: Date.now()
+            };
+
+            if (window.isOfflineMode) {
+                let localRecs = JSON.parse(localStorage.getItem('classroom_student_records') || '[]');
+                localRecs = localRecs.filter(r => r.id !== docId);
+                localRecs.push(recordData);
+                localStorage.setItem('classroom_student_records', JSON.stringify(localRecs));
+                window.allRecords = localRecs;
+                showModal("儲存成功", `今日 (${today}) [${category}] 紀錄已成功儲存！\n完成人數：${completedArray.length} / ${ALL_STUDENTS.length}`);
+                return;
+            }
+
+            if (!window.user || !window.db) return;
+
+            try {
+                const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'records', docId);
+                await setDoc(recordRef, recordData);
+                showModal("同步成功", `今日 (${today}) [${category}] 紀錄已同步至雲端！\n完成人數：${completedArray.length} / ${ALL_STUDENTS.length}`);
+            } catch (error) {
+                console.error("Save error:", error);
+                showModal("儲存失敗", "雲端儲存出錯，已暫存於區域資料。");
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentDateDisplay = document.getElementById('currentDateDisplay');
+            const fourRowsContainer = document.getElementById('fourRowsContainer');
+            const completedCount = document.getElementById('completedCount');
+            const endRecordBtn = document.getElementById('endRecordBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+
+            // 項目按鈕組
+            const categoryChips = document.querySelectorAll('.category-chip');
+            const customCatBtn = document.getElementById('customCatBtn');
+            const customInputModal = document.getElementById('customInputModal');
+            const customCategoryInput = document.getElementById('customCategoryInput');
+            const confirmCustomBtn = document.getElementById('confirmCustomBtn');
+            const cancelCustomBtn = document.getElementById('cancelCustomBtn');
+
+            // 今天日期字串
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            currentDateDisplay.innerText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+
+            // 切換項目主題與顏色
+            function switchCategory(catName, icon, color, lightColor) {
+                currentCategory = catName;
+                currentCategoryIcon = icon;
+                currentCategoryColor = color;
+                currentCategoryLight = lightColor;
+
+                if (!recordState[currentCategory]) {
+                    recordState[currentCategory] = new Set();
+                }
+
+                // 更新頂部視圖 UI
+                document.getElementById('tagName').innerText = currentCategory;
+                document.getElementById('tagIcon').innerText = currentCategoryIcon;
+                document.getElementById('badgeTag').style.backgroundColor = currentCategoryColor;
+                document.getElementById('currentCategoryTag').style.backgroundColor = currentCategoryColor;
+                document.getElementById('cardHeaderIcon').innerText = currentCategoryIcon;
+                document.getElementById('cardHeaderTitle').innerText = `今日打卡區 (${currentCategory})`;
+                document.getElementById('completedCount').style.color = currentCategoryColor;
+                document.getElementById('endRecordBtn').style.backgroundColor = currentCategoryColor;
+                document.getElementById('decoIcon1').innerText = currentCategoryIcon;
+
+                // 更改整體背景發光顏色
+                document.body.style.backgroundColor = lightColor;
+
+                // 更新選單晶片狀態
+                categoryChips.forEach(chip => {
+                    const cName = chip.getAttribute('data-cat');
+                    if (cName === currentCategory || (cName === 'custom' && !['潔牙','作業','訂正','回條'].includes(currentCategory))) {
+                        chip.classList.add('active-chip');
+                        chip.style.backgroundColor = currentCategoryColor;
+                        chip.style.color = '#FFFFFF';
+                        chip.style.borderColor = currentCategoryColor;
+                    } else {
+                        chip.classList.remove('active-chip');
+                        chip.style.backgroundColor = '#FFFFFF';
+                        chip.style.color = '#4A5568';
+                        chip.style.borderColor = '#E2E8F0';
+                    }
+                });
+
+                renderStudentGrid();
+            }
+
+            // 渲染四排學生按鈕網格
+            function renderStudentGrid() {
+                fourRowsContainer.innerHTML = '';
+                const activeSet = recordState[currentCategory];
+
+                ROW_DEFINITIONS.forEach((row, rowIndex) => {
+                    const rowBox = document.createElement('div');
+                    rowBox.className = "bg-gray-50/70 p-4 rounded-2xl border border-gray-100";
+
+                    const rowHeader = document.createElement('div');
+                    rowHeader.className = "text-xs sm:text-sm font-bold text-gray-400 mb-3 flex items-center justify-between";
+                    rowHeader.innerHTML = `<span>${row.title}</span><span class="text-[10px] bg-white px-2 py-0.5 rounded-md border border-gray-200">8 位</span>`;
+                    rowBox.appendChild(rowHeader);
+
+                    const grid = document.createElement('div');
+                    grid.className = "grid grid-cols-4 sm:grid-cols-8 gap-2.5 sm:gap-3.5 justify-items-center";
+
+                    row.ids.forEach(id => {
+                        const btn = document.createElement('button');
+                        const isActive = activeSet.has(id);
+
+                        btn.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 text-lg sm:text-xl font-bold font-bubbly flex items-center justify-center shadow-sm ${
+                            isActive ? 'text-white' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
+                        }`;
+                        
+                        if (isActive) {
+                            btn.style.backgroundColor = currentCategoryColor;
+                            btn.style.borderColor = currentCategoryColor;
+                            btn.style.boxShadow = `0 4px 10px ${currentCategoryColor}55`;
+                        }
+
+                        btn.innerText = id;
+                        btn.onclick = () => {
+                            if (activeSet.has(id)) {
+                                activeSet.delete(id);
+                            } else {
+                                activeSet.add(id);
+                            }
+                            renderStudentGrid();
+                        };
+                        grid.appendChild(btn);
+                    });
+
+                    rowBox.appendChild(grid);
+                    fourRowsContainer.appendChild(rowBox);
+                });
+
+                completedCount.innerText = activeSet.size;
+            }
+
+            // 監聽項目晶片點擊
+            categoryChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const cat = chip.getAttribute('data-cat');
+                    if (cat === 'custom') {
+                        customCategoryInput.value = '';
+                        customInputModal.classList.remove('hidden');
+                        customInputModal.classList.add('flex');
+                        setTimeout(() => {
+                            customInputModal.classList.remove('opacity-0');
+                            customInputModal.querySelector('div').classList.remove('scale-95');
+                            customInputModal.querySelector('div').classList.add('scale-100');
+                        }, 10);
+                        return;
+                    }
+                    const icon = chip.getAttribute('data-icon');
+                    const color = chip.getAttribute('data-color');
+                    const light = chip.getAttribute('data-light');
+                    switchCategory(cat, icon, color, light);
+                });
+            });
+
+            // 確定新增自訂項目
+            confirmCustomBtn.addEventListener('click', () => {
+                const val = customCategoryInput.value.trim();
+                if (!val) {
+                    showModal("提示", "請輸入有效的項目名稱！");
+                    return;
+                }
+                customCatBtn.innerHTML = `📌 ${val}`;
+                cancelCustomBtn.click();
+                switchCategory(val, '📌', '#FF6B6B', '#FFEAEA');
+            });
+
+            cancelCustomBtn.addEventListener('click', () => {
+                customInputModal.classList.add('opacity-0');
+                customInputModal.querySelector('div').classList.remove('scale-100');
+                customInputModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    customInputModal.classList.add('hidden');
+                    customInputModal.classList.remove('flex');
+                }, 250);
+            });
+
+            // 全選按鈕
+            selectAllBtn.addEventListener('click', () => {
+                const activeSet = recordState[currentCategory];
+                if (activeSet.size === ALL_STUDENTS.length) {
+                    activeSet.clear();
+                } else {
+                    ALL_STUDENTS.forEach(id => activeSet.add(id));
+                }
+                renderStudentGrid();
+            });
+
+            // 重置按鈕
+            resetBtn.addEventListener('click', () => {
+                recordState[currentCategory].clear();
+                renderStudentGrid();
+                showModal("已重置", `已清除 [${currentCategory}] 今日點擊狀態。`);
+            });
+
+            // 儲存紀錄按鈕
+            endRecordBtn.addEventListener('click', () => {
+                const completedArray = Array.from(recordState[currentCategory]).sort();
+                window.saveRecord(todayStr, currentCategory, completedArray);
+            });
+
+            // 查詢 Modal 邏輯
+            const openQueryBtn = document.getElementById('openQueryBtn');
+            const closeQueryBtn = document.getElementById('closeQueryBtn');
+            const queryModal = document.getElementById('queryModal');
+            const queryModalContent = document.getElementById('queryModalContent');
+            const tabStudent = document.getElementById('tabStudent');
+            const tabPeriod = document.getElementById('tabPeriod');
+            const panelStudent = document.getElementById('panelStudent');
+            const panelPeriod = document.getElementById('panelPeriod');
+
+            openQueryBtn.addEventListener('click', () => {
+                queryModal.classList.remove('hidden');
+                queryModal.classList.add('flex');
+                setTimeout(() => {
+                    queryModal.classList.remove('opacity-0');
+                    queryModalContent.classList.remove('scale-95');
+                    queryModalContent.classList.add('scale-100');
+                }, 10);
+            });
+
+            closeQueryBtn.addEventListener('click', () => {
+                queryModal.classList.add('opacity-0');
+                queryModalContent.classList.remove('scale-100');
+                queryModalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    queryModal.classList.add('hidden');
+                    queryModal.classList.remove('flex');
+                }, 250);
+            });
+
+            tabStudent.addEventListener('click', () => {
+                tabStudent.classList.add('border-[#52BEE8]', 'text-[#52BEE8]');
+                tabStudent.classList.remove('border-transparent', 'text-gray-400');
+                tabPeriod.classList.remove('border-[#52BEE8]', 'text-[#52BEE8]');
+                tabPeriod.classList.add('border-transparent', 'text-gray-400');
+                panelStudent.classList.remove('hidden');
+                panelPeriod.classList.add('hidden');
+            });
+
+            tabPeriod.addEventListener('click', () => {
+                tabPeriod.classList.add('border-[#52BEE8]', 'text-[#52BEE8]');
+                tabPeriod.classList.remove('border-transparent', 'text-gray-400');
+                tabStudent.classList.remove('border-[#52BEE8]', 'text-[#52BEE8]');
+                tabStudent.classList.add('border-transparent', 'text-gray-400');
+                panelPeriod.classList.remove('hidden');
+                panelStudent.classList.add('hidden');
+            });
+
+            // 按座號查詢
+            document.getElementById('btnQueryStudent').addEventListener('click', () => {
+                let id = document.getElementById('queryStudentId').value.trim();
+                if (id.length === 1) id = '0' + id;
+                
+                const resultDiv = document.getElementById('resultStudent');
+                if (!ALL_STUDENTS.includes(id)) {
+                    resultDiv.innerHTML = `<span class="text-rose-500 font-bold">請輸入有效座號（01~16, 21~36）！</span>`;
+                    return;
+                }
+
+                const matched = window.allRecords.filter(r => r.completed && r.completed.includes(id));
+
+                if (matched.length === 0) {
+                    resultDiv.innerHTML = `座號 <span class="text-[#52BEE8]">${id}</span> 尚無任何完成紀錄。`;
+                    return;
+                }
+
+                let html = `<div class="w-full"><p class="font-bold text-gray-700 text-base mb-3">座號 ${id} 的打卡紀錄 (共 ${matched.length} 筆)</p><ul class="space-y-2">`;
+                matched.forEach(r => {
+                    const cfg = CATEGORIES_CONFIG[r.category] || CATEGORIES_CONFIG['custom'];
+                    html += `<li class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm">
+                                <span>${r.categoryIcon || cfg.icon}</span>
+                                <span class="font-bold text-gray-700">${r.date}</span>
+                                <span class="px-2 py-0.5 text-xs rounded-md text-white font-bold" style="background-color:${cfg.color}">${r.category}</span>
+                                <span class="text-xs text-gray-400 ml-auto">全班: ${r.completed.length}/${r.total}</span>
+                             </li>`;
+                });
+                html += '</ul></div>';
+                resultDiv.innerHTML = html;
+            });
+
+            // 按日期區間查詢
+            document.getElementById('btnQueryPeriod').addEventListener('click', () => {
+                const start = document.getElementById('queryStartDate').value;
+                const end = document.getElementById('queryEndDate').value;
+                const resultDiv = document.getElementById('resultPeriod');
+
+                if (!start || !end) {
+                    resultDiv.innerHTML = `<span class="text-rose-500">請填寫完整的開始與結束日期！</span>`;
+                    return;
+                }
+
+                const matched = window.allRecords.filter(r => r.date >= start && r.date <= end);
+                if (matched.length === 0) {
+                    resultDiv.innerHTML = `於 ${start} 至 ${end} 期間無任何記錄。`;
+                    return;
+                }
+
+                let html = `<div class="w-full space-y-4">`;
+                matched.forEach(r => {
+                    const cfg = CATEGORIES_CONFIG[r.category] || CATEGORIES_CONFIG['custom'];
+                    html += `<div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+                                    <span class="font-bold text-gray-700 flex items-center gap-1.5">
+                                        <span>${r.categoryIcon || cfg.icon}</span>
+                                        <span>${r.date}</span>
+                                        <span class="px-2 py-0.5 text-xs rounded-md text-white font-bold" style="background-color:${cfg.color}">${r.category}</span>
+                                    </span>
+                                    <span class="text-xs font-bold text-gray-400">完成人數: ${r.completed.length} / ${r.total}</span>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">`;
+                    
+                    ALL_STUDENTS.forEach(sid => {
+                        const isDone = r.completed.includes(sid);
+                        html += `<span class="w-7 h-7 text-xs rounded-lg font-bold font-bubbly flex items-center justify-center ${
+                            isDone ? 'text-white shadow-xs' : 'bg-gray-100 text-gray-300'
+                        }" style="${isDone ? 'background-color:'+cfg.color : ''}">${sid}</span>`;
+                    });
+
+                    html += `   </div></div>`;
+                });
+                html += `</div>`;
+                resultDiv.innerHTML = html;
+            });
+
+            // 初始化與渲染
+            switchCategory('潔牙', '🪥', '#52BEE8', '#E4F4FB');
+            initFirebase();
+        });
+
+        // 提示彈窗
+        function showModal(title, message) {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalMessage').innerText = message;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        document.getElementById('modalCloseBtn').addEventListener('click', () => {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 250);
+        });
+    </script>
+</body>
+</html>
