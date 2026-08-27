@@ -141,6 +141,10 @@
                         🔍 歷史查詢
                     </button>
 
+                    <button id="openVacantModalBtn" class="bg-white hover:bg-gray-50 text-gray-700 px-5 py-2 rounded-full font-bold shadow-sm border-2 border-gray-200 active:translate-y-0.5 transition-all flex items-center gap-1.5 text-sm sm:text-base">
+                        👻 空號管理
+                    </button>
+
                     <button id="endRecordBtn" class="text-white px-7 py-2 rounded-full font-bold shadow-md active:translate-y-0.5 transition-all flex items-center gap-2 text-sm sm:text-base bg-[#52BEE8] hover:opacity-90">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                         儲存今日紀錄
@@ -166,7 +170,7 @@
                 <div class="text-right bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
                     <span class="text-xs sm:text-sm text-gray-500 font-bold">完成進度：</span>
                     <span id="completedCount" class="text-2xl sm:text-3xl font-bubbly font-bold transition-colors duration-300 text-[#52BEE8]">0</span>
-                    <span class="text-xs sm:text-sm text-gray-400 font-bold">/ 32</span>
+                    <span id="totalCountText" class="text-xs sm:text-sm text-gray-400 font-bold">/ 27</span>
                 </div>
             </div>
 
@@ -202,6 +206,26 @@
             <div class="flex gap-3 justify-center">
                 <button id="cancelCustomBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-5 py-2.5 rounded-full font-bold text-sm transition-all">取消</button>
                 <button id="confirmCustomBtn" class="bg-[#FF6B6B] hover:bg-[#EE5253] text-white px-7 py-2.5 rounded-full font-bold text-sm shadow-md transition-all">確定啟用</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 空號/虛化管理 Modal -->
+    <div id="vacantModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white rounded-[32px] shadow-2xl p-6 sm:p-8 max-w-lg w-full transform scale-95 transition-transform duration-300 border-4 border-white text-center">
+            <h3 class="text-xl font-bubbly font-bold text-gray-700 mb-1 flex items-center justify-center gap-2">
+                <span>👻</span> 班級空號 / 虛化管理
+            </h3>
+            <p class="text-xs text-gray-400 mb-4 font-bold">點選座號切換「虛化(無人)」或「正常啟用」。淡色虛線表示該座號暫時無人。</p>
+            
+            <!-- 座號快速切換網格 -->
+            <div id="vacantGrid" class="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-6 max-h-[50vh] overflow-y-auto p-2">
+                <!-- JS 動態生成 -->
+            </div>
+
+            <div class="flex gap-3 justify-center border-t border-gray-100 pt-4">
+                <button id="resetVacantDefaultBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold text-xs transition-all">恢復預設(13,16,34,35,36無人)</button>
+                <button id="closeVacantModalBtn" class="bg-[#52BEE8] hover:bg-[#3FA9D4] text-white px-6 py-2 rounded-full font-bold text-sm shadow-md transition-all">完成設定</button>
             </div>
         </div>
     </div>
@@ -279,6 +303,10 @@
 
         const ALL_STUDENTS = ROW_DEFINITIONS.flatMap(r => r.ids);
 
+        // 預設無人座號集合：13, 16, 34, 35, 36
+        const DEFAULT_VACANT_SEATS = ["13", "16", "34", "35", "36"];
+        let vacantSeats = new Set(JSON.parse(localStorage.getItem('classroom_vacant_seats') || JSON.stringify(DEFAULT_VACANT_SEATS)));
+
         // 項目主題設定
         const CATEGORIES_CONFIG = {
             '潔牙': { icon: '🪥', color: '#52BEE8', light: '#E4F4FB', textDark: '#2B8CB5' },
@@ -309,14 +337,7 @@
         window.isOfflineMode = false;
 
         // Firebase Config (防護備用)
-        const firebaseConfig = {
-		    apiKey: "AIzaSyCTVaHM43A2WoOtycDBWQbe1I5PLT2-hIg",
-			authDomain: "record-87976.firebaseapp.com",
-			projectId: "record-87976",
-			storageBucket: "record-87976.firebasestorage.app",
-			messagingSenderId: "145250231533",
-			appId: "1:145250231533:web:1602223d25792c85c958e4"
-		};
+        const firebaseConfig = {};
 
         async function initFirebase() {
             try {
@@ -366,6 +387,7 @@
         }
 
         window.saveRecord = async function(today, category, completedArray) {
+            const activeTotal = ALL_STUDENTS.length - vacantSeats.size;
             const docId = `${today}_${category}`;
             const recordData = {
                 id: docId,
@@ -373,7 +395,7 @@
                 category: category,
                 categoryIcon: currentCategoryIcon,
                 completed: completedArray,
-                total: ALL_STUDENTS.length,
+                total: activeTotal,
                 timestamp: Date.now()
             };
 
@@ -383,7 +405,7 @@
                 localRecs.push(recordData);
                 localStorage.setItem('classroom_student_records', JSON.stringify(localRecs));
                 window.allRecords = localRecs;
-                showModal("儲存成功", `今日 (${today}) [${category}] 紀錄已成功儲存！\n完成人數：${completedArray.length} / ${ALL_STUDENTS.length}`);
+                showModal("儲存成功", `今日 (${today}) [${category}] 紀錄已成功儲存！\n完成人數：${completedArray.length} / ${activeTotal}`);
                 return;
             }
 
@@ -392,7 +414,7 @@
             try {
                 const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'records', docId);
                 await setDoc(recordRef, recordData);
-                showModal("同步成功", `今日 (${today}) [${category}] 紀錄已同步至雲端！\n完成人數：${completedArray.length} / ${ALL_STUDENTS.length}`);
+                showModal("同步成功", `今日 (${today}) [${category}] 紀錄已同步至雲端！\n完成人數：${completedArray.length} / ${activeTotal}`);
             } catch (error) {
                 console.error("Save error:", error);
                 showModal("儲存失敗", "雲端儲存出錯，已暫存於區域資料。");
@@ -403,6 +425,7 @@
             const currentDateDisplay = document.getElementById('currentDateDisplay');
             const fourRowsContainer = document.getElementById('fourRowsContainer');
             const completedCount = document.getElementById('completedCount');
+            const totalCountText = document.getElementById('totalCountText');
             const endRecordBtn = document.getElementById('endRecordBtn');
             const resetBtn = document.getElementById('resetBtn');
             const selectAllBtn = document.getElementById('selectAllBtn');
@@ -475,7 +498,8 @@
 
                     const rowHeader = document.createElement('div');
                     rowHeader.className = "text-xs sm:text-sm font-bold text-gray-400 mb-3 flex items-center justify-between";
-                    rowHeader.innerHTML = `<span>${row.title}</span><span class="text-[10px] bg-white px-2 py-0.5 rounded-md border border-gray-200">8 位</span>`;
+                    // 移除 "8 位" 標籤
+                    rowHeader.innerHTML = `<span>${row.title}</span>`;
                     rowBox.appendChild(rowHeader);
 
                     const grid = document.createElement('div');
@@ -484,19 +508,32 @@
                     row.ids.forEach(id => {
                         const btn = document.createElement('button');
                         const isActive = activeSet.has(id);
+                        const isVacant = vacantSeats.has(id);
 
-                        btn.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 text-lg sm:text-xl font-bold font-bubbly flex items-center justify-center shadow-sm ${
-                            isActive ? 'text-white' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
+                        btn.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 text-lg sm:text-xl font-bold font-bubbly flex items-center justify-center shadow-sm relative ${
+                            isVacant 
+                                ? 'opacity-30 filter blur-[1px] bg-gray-200/60 border-dashed border-gray-300 text-gray-400 hover:blur-none hover:opacity-80' 
+                                : isActive ? 'text-white' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
                         }`;
                         
-                        if (isActive) {
+                        if (isActive && !isVacant) {
                             btn.style.backgroundColor = currentCategoryColor;
                             btn.style.borderColor = currentCategoryColor;
                             btn.style.boxShadow = `0 4px 10px ${currentCategoryColor}55`;
                         }
 
                         btn.innerText = id;
+                        btn.title = isVacant ? `座號 ${id} (目前虛化/無人，點擊可直接恢復)` : `座號 ${id} (按右鍵可快速設為虛化/無人)`;
+
+                        // 點擊事件
                         btn.onclick = () => {
+                            if (vacantSeats.has(id)) {
+                                vacantSeats.delete(id);
+                                localStorage.setItem('classroom_vacant_seats', JSON.stringify(Array.from(vacantSeats)));
+                                renderStudentGrid();
+                                showModal("座號已恢復", `座號 ${id} 已恢復為正常顯示狀態！`);
+                                return;
+                            }
                             if (activeSet.has(id)) {
                                 activeSet.delete(id);
                             } else {
@@ -504,6 +541,22 @@
                             }
                             renderStudentGrid();
                         };
+
+                        // 右鍵事件：快速切換虛化/啟用
+                        btn.oncontextmenu = (e) => {
+                            e.preventDefault();
+                            if (vacantSeats.has(id)) {
+                                vacantSeats.delete(id);
+                                showModal("座號已恢復", `座號 ${id} 已恢復啟用。`);
+                            } else {
+                                vacantSeats.add(id);
+                                activeSet.delete(id); // 虛化時移除打卡
+                                showModal("座號已虛化", `座號 ${id} 已設為虛化/無人狀態。`);
+                            }
+                            localStorage.setItem('classroom_vacant_seats', JSON.stringify(Array.from(vacantSeats)));
+                            renderStudentGrid();
+                        };
+
                         grid.appendChild(btn);
                     });
 
@@ -511,8 +564,71 @@
                     fourRowsContainer.appendChild(rowBox);
                 });
 
+                const activeTotal = ALL_STUDENTS.length - vacantSeats.size;
+                totalCountText.innerText = `/ ${activeTotal}`;
                 completedCount.innerText = activeSet.size;
             }
+
+            // 空號管理 Modal 邏輯
+            const openVacantModalBtn = document.getElementById('openVacantModalBtn');
+            const vacantModal = document.getElementById('vacantModal');
+            const vacantGrid = document.getElementById('vacantGrid');
+            const closeVacantModalBtn = document.getElementById('closeVacantModalBtn');
+            const resetVacantDefaultBtn = document.getElementById('resetVacantDefaultBtn');
+
+            function renderVacantGrid() {
+                vacantGrid.innerHTML = '';
+                ALL_STUDENTS.forEach(id => {
+                    const isVacant = vacantSeats.has(id);
+                    const btn = document.createElement('button');
+                    btn.className = `p-2 rounded-xl border-2 font-bubbly font-bold text-sm transition-all flex flex-col items-center justify-center ${
+                        isVacant ? 'bg-gray-100 border-dashed border-gray-300 text-gray-400 opacity-60' : 'bg-sky-light border-[#52BEE8] text-[#2B8CB5]'
+                    }`;
+                    btn.innerHTML = `<span>${id}</span><span class="text-[10px] mt-0.5">${isVacant ? '虛化' : '正常'}</span>`;
+                    
+                    btn.onclick = () => {
+                        if (vacantSeats.has(id)) {
+                            vacantSeats.delete(id);
+                        } else {
+                            vacantSeats.add(id);
+                            if (recordState[currentCategory]) recordState[currentCategory].delete(id);
+                        }
+                        localStorage.setItem('classroom_vacant_seats', JSON.stringify(Array.from(vacantSeats)));
+                        renderVacantGrid();
+                        renderStudentGrid();
+                    };
+                    vacantGrid.appendChild(btn);
+                });
+            }
+
+            openVacantModalBtn.addEventListener('click', () => {
+                renderVacantGrid();
+                vacantModal.classList.remove('hidden');
+                vacantModal.classList.add('flex');
+                setTimeout(() => {
+                    vacantModal.classList.remove('opacity-0');
+                    vacantModal.querySelector('div').classList.remove('scale-95');
+                    vacantModal.querySelector('div').classList.add('scale-100');
+                }, 10);
+            });
+
+            closeVacantModalBtn.addEventListener('click', () => {
+                vacantModal.classList.add('opacity-0');
+                vacantModal.querySelector('div').classList.remove('scale-100');
+                vacantModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    vacantModal.classList.add('hidden');
+                    vacantModal.classList.remove('flex');
+                }, 250);
+            });
+
+            resetVacantDefaultBtn.addEventListener('click', () => {
+                vacantSeats = new Set(DEFAULT_VACANT_SEATS);
+                localStorage.setItem('classroom_vacant_seats', JSON.stringify(Array.from(vacantSeats)));
+                renderVacantGrid();
+                renderStudentGrid();
+                showModal("重置成功", "已將虛化座號恢復為預設 (13, 16, 34, 35, 36)。");
+            });
 
             // 監聽項目晶片點擊
             categoryChips.forEach(chip => {
@@ -558,13 +674,16 @@
                 }, 250);
             });
 
-            // 全選按鈕
+            // 全選按鈕 (僅選取非虛化的有效座號)
             selectAllBtn.addEventListener('click', () => {
                 const activeSet = recordState[currentCategory];
-                if (activeSet.size === ALL_STUDENTS.length) {
+                const activeStudents = ALL_STUDENTS.filter(id => !vacantSeats.has(id));
+                const allActiveSelected = activeStudents.every(id => activeSet.has(id));
+
+                if (allActiveSelected) {
                     activeSet.clear();
                 } else {
-                    ALL_STUDENTS.forEach(id => activeSet.add(id));
+                    activeStudents.forEach(id => activeSet.add(id));
                 }
                 renderStudentGrid();
             });
@@ -655,7 +774,7 @@
                                 <span>${r.categoryIcon || cfg.icon}</span>
                                 <span class="font-bold text-gray-700">${r.date}</span>
                                 <span class="px-2 py-0.5 text-xs rounded-md text-white font-bold" style="background-color:${cfg.color}">${r.category}</span>
-                                <span class="text-xs text-gray-400 ml-auto">全班: ${r.completed.length}/${r.total}</span>
+                                <span class="text-xs text-gray-400 ml-auto">全班: ${r.completed.length}/${r.total || ALL_STUDENTS.length}</span>
                              </li>`;
                 });
                 html += '</ul></div>';
@@ -689,7 +808,7 @@
                                         <span>${r.date}</span>
                                         <span class="px-2 py-0.5 text-xs rounded-md text-white font-bold" style="background-color:${cfg.color}">${r.category}</span>
                                     </span>
-                                    <span class="text-xs font-bold text-gray-400">完成人數: ${r.completed.length} / ${r.total}</span>
+                                    <span class="text-xs font-bold text-gray-400">完成人數: ${r.completed.length} / ${r.total || ALL_STUDENTS.length}</span>
                                 </div>
                                 <div class="flex flex-wrap gap-1.5">`;
                     
